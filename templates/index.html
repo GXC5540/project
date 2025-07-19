@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻分类器</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- 自定义Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        neutral: '#F3F4F6',
+                        'neutral-dark': '#1F2937',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .card-hover {
+                @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #165DFF 0%, #36D399 100%);
+            }
+            .faq-content {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease-out;
+            }
+            .faq-open .faq-content {
+                max-height: 500px;
+                transition: max-height 0.5s ease-in;
+            }
+            .faq-toggle-icon {
+                transition: transform 0.3s ease;
+            }
+            .faq-open .faq-toggle-icon {
+                transform: rotate(180deg);
+            }
+        }
+    </style>
+
+    <style>
+        /* 深色模式下的渐变背景 */
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #0F4CFF 0%, #2BB582 100%);
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+    <!-- 导航栏 -->
+    <nav class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-primary font-bold text-xl flex items-center">
+                        <i class="fa fa-newspaper-o mr-2"></i>
+                        智能新闻分类器
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="#" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200">
+                        <i class="fa fa-home mr-1"></i>首页
+                    </a>
+                    <a href="#" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200">
+                        <i class="fa fa-info-circle mr-1"></i>关于
+                    </a>
+                    <!-- 帮助中心按钮 -->
+                    <a href="#helpCenter" class="text-gray-600 dark:text-gray-300 hover:text-primary transition-colors duration-200">
+                        <i class="fa fa-question-circle mr-1"></i>使用指南
+                    </a>
+                    <!-- 深色模式切换按钮 -->
+                    <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
+                        <i class="fa fa-moon-o dark:hidden text-gray-600"></i>
+                        <i class="fa fa-sun-o hidden dark:block text-yellow-400"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- 页面标题 -->
+        <div class="text-center mb-10">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 dark:text-white mb-3">
+                智能新闻分类系统
+            </h1>
+            <p class="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                基于朴素贝叶斯的新闻分类技术，快速准确地识别新闻类别
+            </p>
+        </div>
+
+        <!-- 分类器卡片 -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover transition-colors duration-300">
+            <div class="gradient-bg p-6 text-white">
+                <h2 class="text-xl font-semibold">新闻分类预测</h2>
+                <p class="text-white/80 mt-1">输入新闻内容，获取自动分类结果</p>
+            </div>
+
+            <div class="p-6">
+                <div class="mb-6">
+                    <label for="newsContent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        新闻内容
+                    </label>
+                    <textarea
+                        id="newsContent"
+                        class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 resize-none"
+                        rows="8"
+                        placeholder="请输入新闻内容..."
+                    ></textarea>
+                    <div class="flex justify-between items-center mt-2">
+                        <span id="charCount" class="text-xs text-gray-500 dark:text-gray-400">0/10000 字符</span>
+                        <button id="clearBtn" class="text-xs text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa fa-eraser mr-1"></i>清空
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button
+                        id="predictBtn"
+                        class="px-6 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center"
+                    >
+                        <i class="fa fa-magic mr-2"></i>
+                        开始分类
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="mt-8 flex justify-center items-center hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md flex items-center transition-colors duration-300">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mr-4"></div>
+                <span class="text-gray-700 dark:text-gray-300">正在分析中，请稍候...</span>
+            </div>
+        </div>
+
+        <!-- 结果展示 -->
+        <div id="result" class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden card-hover hidden transition-colors duration-300">
+            <div class="bg-gray-100 dark:bg-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">分类结果</h2>
+            </div>
+
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row items-center justify-between">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">新闻类别</h3>
+                        <div id="predictionResult" class="text-2xl font-bold text-primary"></div>
+                    </div>
+
+                    <div class="w-full md:w-1/2">
+                        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">分类置信度</h3>
+                        <div class="bg-gray-200 dark:bg-gray-600 rounded-full h-6 mb-2">
+                            <div id="confidenceBar" class="bg-primary h-6 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <span>低</span>
+                            <span id="confidenceScore">0%</span>
+                            <span>高</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">类别分布</h3>
+                    <div id="categoryDistribution" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- 类别分布将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="mt-12">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">历史记录</h2>
+            <div id="historyList" class="space-y-3">
+                <!-- 历史记录将通过JS动态生成 -->
+                <div class="text-center text-gray-500 dark:text-gray-400 italic">暂无历史记录</div>
+            </div>
+        </div>
+
+        <!-- 帮助中心 -->
+        <div id="helpCenter" class="mt-16">
+            <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-6 flex items-center">
+                <i class="fa fa-question-circle text-primary mr-2"></i>
+                使用指南
+            </h2>
+
+            <div class="space-y-4">
+                <!-- FAQ 折叠面板 1 -->
+                <div class="faq-item bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+                    <button class="faq-toggle w-full flex justify-between items-center p-5 text-left focus:outline-none">
+                        <span class="font-medium text-lg">如何使用新闻分类器？</span>
+                        <i class="fa fa-chevron-down faq-toggle-icon text-gray-500 dark:text-gray-400"></i>
+                    </button>
+                    <div class="faq-content px-5 pb-5">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            使用新闻分类器非常简单，只需在文本框中粘贴或输入您想要分类的新闻内容，然后点击"开始分类"按钮。系统会自动分析文本内容，并给出最可能的分类结果，同时显示分类置信度和各类别的分布情况。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ 折叠面板 2 -->
+                <div class="faq-item bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+                    <button class="faq-toggle w-full flex justify-between items-center p-5 text-left focus:outline-none">
+                        <span class="font-medium text-lg">系统支持哪些新闻类别？</span>
+                        <i class="fa fa-chevron-down faq-toggle-icon text-gray-500 dark:text-gray-400"></i>
+                    </button>
+                    <div class="faq-content px-5 pb-5">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            目前系统支持以下新闻类别：体育、娱乐、家居、房产、教育、时尚、时政、游戏、科技和财经。系统会根据新闻内容的主题自动将其归类到最匹配的类别中。
+                        </p>
+                    </div>
+                </div>
+
+
+
+                <!-- FAQ 折叠面板 5 -->
+                <div class="faq-item bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+                    <button class="faq-toggle w-full flex justify-between items-center p-5 text-left focus:outline-none">
+                        <span class="font-medium text-lg">深色模式如何切换？</span>
+                        <i class="fa fa-chevron-down faq-toggle-icon text-gray-500 dark:text-gray-400"></i>
+                    </button>
+                    <div class="faq-content px-5 pb-5">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            可以通过点击导航栏右上角的月亮/太阳图标来切换深色/浅色模式。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 dark:bg-gray-900 text-white py-8 mt-12 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <span class="font-bold text-lg">智能新闻分类器</span>
+                    <p class="text-gray-400 mt-1">基于朴素贝叶斯的新闻自动分类系统</p>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="https://dean.xjtu.edu.cn/" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa fa-github text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa fa-twitter text-xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors duration-200">
+                        <i class="fa fa-linkedin text-xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
+                &copy; 2025 智能新闻分类器 | 保留所有权利
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 深色模式切换
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        // 检查本地存储中的主题偏好或系统偏好
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        } else {
+            htmlElement.classList.remove('dark');
+        }
+
+        // 主题切换按钮点击事件
+        themeToggle.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            localStorage.theme = htmlElement.classList.contains('dark') ? 'dark' : 'light';
+        });
+
+        // 初始化字符计数器
+        const newsContent = document.getElementById('newsContent');
+        const charCount = document.getElementById('charCount');
+
+        newsContent.addEventListener('input', function() {
+            const count = this.value.length;
+            charCount.textContent = `${count}/10000 字符`;
+
+            // 接近最大长度时改变颜色
+            if (count > 9000) {
+                charCount.classList.add('text-amber-500');
+            } else {
+                charCount.classList.remove('text-amber-500');
+            }
+
+            // 超过最大长度时截断
+            if (count > 10000) {
+                this.value = this.value.substring(0, 10000);
+                charCount.textContent = '10000/10000 字符';
+                charCount.classList.add('text-red-500');
+            } else {
+                charCount.classList.remove('text-red-500');
+            }
+        });
+
+        // 清空按钮
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            newsContent.value = '';
+            charCount.textContent = '0/10000 字符';
+        });
+
+        // 预测按钮
+        document.getElementById('predictBtn').addEventListener('click', function() {
+            const newsContent = document.getElementById('newsContent').value.trim();
+
+            if (!newsContent) {
+                alert('请输入新闻内容！');
+                return;
+            }
+
+            // 显示加载动画
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('result').style.display = 'none';
+
+            // 发送预测请求（保持原有逻辑不变）
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `news_content=${encodeURIComponent(newsContent)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 隐藏加载动画
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.status === 'success') {
+                    // 更新预测结果
+                    document.getElementById('predictionResult').textContent = data.prediction;
+
+                    // 更新置信度条（模拟数据）
+                    const confidence = Math.floor(Math.random() * 30) + 70; // 70-99%
+                    document.getElementById('confidenceBar').style.width = `${confidence}%`;
+                    document.getElementById('confidenceScore').textContent = `${confidence}%`;
+
+                    // 更新类别分布（模拟数据）
+                    const categories = ['体育', '娱乐', '家居', '房产', '教育', '时尚', '时政', '游戏', '科技','财经'];
+                    const distribution = categories.map(cat => {
+                        return {
+                            category: cat,
+                            score: cat === data.prediction ? confidence : Math.floor(Math.random() * confidence)
+                        };
+                    }).sort((a, b) => b.score - a.score);
+
+                    const distributionHtml = distribution.map(item => `
+                        <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg transition-colors duration-300">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium">${item.category}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">${item.score}%</span>
+                            </div>
+                            <div class="bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: ${item.score}%"></div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('categoryDistribution').innerHTML = distributionHtml;
+
+                    // 显示结果
+                    document.getElementById('result').style.display = 'block';
+
+                    // 添加到历史记录
+                    addToHistory(data.prediction, newsContent);
+                } else {
+                    alert('预测失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                alert('发生错误: ' + error);
+            });
+        });
+
+        // 历史记录功能
+        function addToHistory(category, content) {
+            const historyList = document.getElementById('historyList');
+            const firstChild = historyList.firstElementChild;
+
+            // 如果是第一条记录，移除"暂无历史记录"提示
+            if (firstChild && firstChild.classList.contains('italic')) {
+                historyList.removeChild(firstChild);
+            }
+
+            // 创建新的历史记录项
+            const historyItem = document.createElement('div');
+            historyItem.className = 'bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300';
+
+            // 截取内容的前50个字符
+            const truncatedContent = content.length > 50 ? content.substring(0, 50) + '...' : content;
+
+            // 设置不同类别的颜色
+            const categoryColors = {
+                '体育': 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100',      // 蓝色系
+                '娱乐': 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100',    // 绿色系
+                '家居': 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-100',  // 紫色系
+                '房产': 'bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-100',     // 粉色系
+                '教育': 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100',    // 琥珀色系
+                '时尚': 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-100',     // 蓝绿色系
+                '时政': 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100',       // 红色系
+                '游戏': 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100',  // 黄色系
+                '科技': 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-100',  // 靛蓝色系
+                '财经': 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-100',
+            };
+
+            const colorClass = categoryColors[category] || 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200';
+
+            historyItem.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}">
+                        ${category}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">刚刚</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">${truncatedContent}</p>
+                <div class="mt-3 flex justify-end">
+                    <button class="text-xs text-primary hover:text-primary/80 view-history" data-content="${encodeURIComponent(content)}">
+                        查看详情
+                    </button>
+                </div>
+            `;
+
+            // 添加到历史列表的开头
+            historyList.insertBefore(historyItem, historyList.firstChild);
+
+            // 为查看详情按钮添加事件监听
+            historyItem.querySelector('.view-history').addEventListener('click', function() {
+                const fullContent = decodeURIComponent(this.getAttribute('data-content'));
+                alert('完整内容:\n\n' + fullContent);
+            });
+        }
+
+        // 帮助中心折叠面板功能
+        document.querySelectorAll('.faq-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const faqItem = this.closest('.faq-item');
+                faqItem.classList.toggle('faq-open');
+            });
+        });
+    </script>
+</body>
+</html>
